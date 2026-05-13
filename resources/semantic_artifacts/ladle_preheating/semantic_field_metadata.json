@@ -1,0 +1,61 @@
+{
+  "artifact_type": "tsf_semantic_field",
+  "variable_names": [
+    "时间间隔",
+    "煤气阀门开度",
+    "CO2流量",
+    "O2流量",
+    "CO流量",
+    "N2流量",
+    "煤气压力",
+    "空气阀门开度",
+    "空气O2流量",
+    "空气N2流量",
+    "空气CO2流量",
+    "空气压力",
+    "燃烧效率指标",
+    "温度"
+  ],
+  "descriptions": [
+    "time_interval, s. time difference between consecutive records; indicates sampling irregularity and modulates temperature change magnitude; time feature. defines time spacing within input window; influences rate-of-change effects but does not directly cause future temperature; affects all variables by determining temporal resolution, interacts with temperature rate-of-change to influence prediction.",
+    "gas_valve_opening, %. opening percentage of converter gas valve controlling fuel supply; fuel-side control input that governs gas flow and combustion intensity; control. past control actions influence future temperature through combustion and heating dynamics; directly affects gas flow rates (CO, CO2, O2, N2), influences combustion efficiency and heat input to ladle.",
+    "gas_co2_flow, m^3/s. flow rate of carbon dioxide in converter gas, a non-combustible diluent; gas-side composition observation that reduces effective heat input; observation. past CO2 flow contributes to past combustion dilution and affects future heat balance; part of total gas flow; dilutes combustible CO, affects combustion efficiency by altering flammable mixture.",
+    "gas_o2_flow, m^3/s. flow rate of oxygen in converter gas, a minor oxidant component; gas-side oxygen observation that supplements combustion air oxygen; observation. past gas O2 flow contributes to total oxygen available for combustion and affects future heat release; combines with air O2 flow to determine total oxidizer amount, influences fuel oxidation completeness.",
+    "gas_co_flow, m^3/s. flow rate of carbon monoxide, the primary combustible component in converter gas; fuel heat value component observation that dominates heat input; observation. past CO flow is a direct driver of heat release and strongly influences future temperature trajectory; primary determinant of combustion heat, reacts with oxygen (from gas and air) to produce temperature rise, its ratio to inert gases affects combustion efficiency.",
+    "gas_n2_flow, m^3/s. flow rate of nitrogen, an inert component in converter gas; gas-side inert component observation that dilutes combustion; observation. past N2 flow reduces effective heat input and moderates future temperature rise; dilutes combustible mixture, lowering flame temperature, part of total gas flow and affects thermal mass in system.",
+    "gas_pressure, MPa. supply pressure of converter gas, constraining fuel delivery stability; fuel-side supply state that influences gas flow rates and combustion stability; state. past gas pressure influences gas flow dynamics and thus future combustion and temperature; correlates with gas flow rates and valve opening, affects combustion stability and heat input consistency.",
+    "air_valve_opening, %. opening percentage of air valve controlling combustion air supply; air-side control input that governs air flow and air-fuel ratio; control. past air valve settings influence air flow and future combustion completeness, affecting temperature; directly affects air flow rates (O2, N2, CO2), determines air-fuel ratio and thus combustion efficiency.",
+    "air_o2_flow, m^3/s. flow rate of oxygen in combustion air, the main oxidizer; air-side oxygen observation that drives fuel combustion; observation. past air O2 flow directly determines combustion completeness and heat release, shaping future temperature; primary oxidant; reacts with gas CO to generate heat, key component in air-fuel ratio and combustion efficiency.",
+    "air_n2_flow, m^3/s. flow rate of nitrogen in combustion air, an inert diluent; air-side inert component observation that indicates total air supply and dilutes combustion; observation. past air N2 flow contributes to thermal mass and dilutes combustion, moderating future temperature rise; diluent that absorbs heat and slows temperature increase, part of total air flow; correlates with air O2 flow.",
+    "air_co2_flow, m^3/s. trace flow rate of carbon dioxide in combustion air; air-side gas composition observation of negligible magnitude; observation. negligible direct effect on future temperature; part of air composition background; minor component of combustion air; low impact on combustion, can reflect air source purity but not a control variable.",
+    "air_pressure, MPa. supply pressure of combustion air, constraining air delivery; air-side supply state that influences air flow and air-fuel ratio stability; state. past air pressure affects air flow dynamics and thus future combustion quality and temperature; correlates with air flow rates and valve opening, affects air-fuel ratio consistency and combustion stability.",
+    "combustion_efficiency_index, dimensionless. derived metric based on actual air-fuel ratio relative to optimal range, indicating combustion completeness; derived combustion state feature that integrates fuel and air flows; derived. past efficiency reflects how well past combustion utilized fuel, directly linked to heat release rate and future temperature change; computed from gas and air flow rates, close to optimal value (0.988-1.087) maximizes heat output, directly influences temperature rise rate.",
+    "temperature, °C. internal ladle temperature measured by infrared pyrometer, indicating current thermal state; historical target observation; the variable to be forecast in future steps; historical target state. past temperatures are the direct historical target and provide thermal inertia information; future temperatures are the prediction target; integrated outcome of all control and state variables, exhibits thermal inertia and is autocorrelated over short horizons, serves as both input (history) and output (future) depending on time step."
+  ],
+  "embedding_model": "text-embedding-v4",
+  "embedding_dim": 128,
+  "semantic_dim": 128,
+  "direction_method": "direct_embedding",
+  "arrays": {
+    "directions": "directions.npy"
+  },
+  "prompt_version": "tsf-semantic-cards-v1",
+  "review_status": "generated",
+  "feature_names": [
+    "时间间隔",
+    "煤气阀门开度",
+    "CO2流量",
+    "O2流量",
+    "CO流量",
+    "N2流量",
+    "煤气压力",
+    "空气阀门开度",
+    "空气O2流量",
+    "空气N2流量",
+    "空气CO2流量",
+    "空气压力",
+    "燃烧效率指标",
+    "温度"
+  ],
+  "public_note": "Precomputed variable semantic directions for running the released method examples without embedding API calls."
+}

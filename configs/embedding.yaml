@@ -1,0 +1,8 @@
+provider: openai_compatible
+model: text-embedding-v4
+base_url: ${TSF_EMBEDDING_BASE_URL}
+api_key_env: TSF_EMBEDDING_API_KEY
+batch_size: 10
+timeout_seconds: 120
+normalize_vectors: true
+truncate_dim: 128

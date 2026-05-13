@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tsf-open"
+version = "0.1.0"
+description = "Open-source method implementation for industrial time-series forecasting and soft sensing"
+requires-python = ">=3.14"
+dependencies = [
+  "numpy",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "matplotlib",
+]
+llm = [
+  "openai",
+]
+train = [
+  "kernels",
+  "scikit-learn",
+  "torch",
+  "transformers",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+markers = [
+  "live: tests that perform real external LLM or embedding calls",
+]

@@ -1,0 +1,34 @@
+{
+  "artifact_type": "tsf_semantic_field",
+  "variable_names": [
+    "q_in",
+    "p2",
+    "p3",
+    "phase_pressurizing",
+    "phase_discharging"
+  ],
+  "descriptions": [
+    "Feed Flow Rate, simulated volumetric flow unit. Volumetric flow rate of slurry entering the thickener/dewatering system, reflecting feed load; Provides real-time feed load observation; observation. Input includes 30-minute history (t-29 to t-0) of feed flow rate relative to the current target minute; Influences pressures p2 and p3, Drives phase transitions (pressurizing/discharging).",
+    "Mid Pressure, simulated pressure unit. Pressure measurement at the middle section of the thickener, indicating compaction and hydraulic state; Reflects internal process dynamics and compaction condition; observation. Input includes 30-minute mid pressure history to capture dynamics related to underflow concentration; Related to feed flow q_in, Correlated with bottom pressure p3, Interpreted with phase indicators for state estimation.",
+    "Bottom Pressure, simulated pressure unit. Pressure measurement at the bottom of the thickener, strongly related to underflow concentration via pressure-concentration mapping; Primary observable proxy for underflow concentration; observation. Input includes 30-minute bottom pressure history; current pressure is most directly linked to current concentration; Most directly related to underflow concentration, Influenced by feed flow q_in and mid pressure p2, Phase (pressurizing/discharging) affects the mapping to concentration.",
+    "Pressurizing Phase Indicator, binary. Binary indicator showing whether the system is currently in the pressurizing (compaction) phase of the cycle; Distinguishes operational phase that governs compression and pressure build-up; state. Input includes 30-minute history of pressurizing phase status to contextualize other variables; Part of one-hot phase encoding; mutually exclusive with phase_discharging, Indicates phase of pressure increase affecting p2 and p3, Transitions triggered by pressure/flow conditions.",
+    "Discharging Phase Indicator, binary. Binary indicator showing whether the system is currently in the discharging/dewatering phase; Distinguishes operational phase that governs discharging and dewatering actions; state. Input includes 30-minute history of discharging phase status to contextualize other variables; Part of one-hot phase encoding; mutually exclusive with phase_pressurizing, Affects how bottom pressure p3 relates to underflow concentration, May correlate with feed flow q_in and pressure trends."
+  ],
+  "embedding_model": "text-embedding-v4",
+  "embedding_dim": 128,
+  "semantic_dim": 128,
+  "direction_method": "direct_embedding",
+  "arrays": {
+    "directions": "directions.npy"
+  },
+  "prompt_version": "tsf-semantic-cards-v1",
+  "review_status": "generated",
+  "feature_names": [
+    "q_in",
+    "p2",
+    "p3",
+    "phase_pressurizing",
+    "phase_discharging"
+  ],
+  "public_note": "Precomputed variable semantic directions for running the released method examples without embedding API calls."
+}

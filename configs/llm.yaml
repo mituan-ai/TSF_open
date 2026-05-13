@@ -1,0 +1,8 @@
+# Model, base_url, and key are read from configs/env/api.env plus ignored configs/env/api.local.env.
+provider: openai_compatible
+model: ${TSF_LLM_MODEL}
+base_url: ${TSF_LLM_BASE_URL}
+api_key_env: TSF_LLM_API_KEY
+reasoning_effort: max
+max_tokens: 24000
+timeout_seconds: 240

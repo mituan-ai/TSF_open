@@ -1,0 +1,46 @@
+dataset:
+  name: indpensim
+  path: resources/datasets/indpensim
+  data_name: windows.npz
+  validation_scenarios: ["train_recipe_005", "train_recipe_011", "train_recipe_017", "train_recipe_023", "train_recipe_029"]
+  test_domain_buckets: ["same_family", "near", "far"]
+
+model:
+  output_dim: 1
+  backbone:
+    type: gru
+    hidden_size: 96
+    num_layers: 2
+    dropout: 0.2
+
+method:
+  name: tsf
+  semantic_artifact: resources/semantic_artifacts/indpensim
+  numeric_path: diagonal
+
+training:
+  seed: 42
+  device: cuda
+  max_epochs: 100
+  batch_size: 64
+  num_workers: 0
+  optimizer: AdamW
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  loss: MSELoss
+  gradient_clip_norm: 1.0
+  early_stopping_patience: 40
+  early_stopping_min_delta: 0.00001
+  scheduler: ReduceLROnPlateau
+  scheduler_factor: 0.5
+  scheduler_patience: 15
+  min_lr: 0.00001
+
+evaluation:
+  metrics: ["MAE", "RMSE", "R^2", "Inference Time (ms/step)", "Parameters", "Peak RSS (MB)"]
+  groups: ["overall", "domain_bucket", "scenario_name"]
+  timing_warmup_loops: 2
+  timing_repeat_loops: 5
+
+output:
+  root: outputs/runs
