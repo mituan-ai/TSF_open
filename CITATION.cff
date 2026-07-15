@@ -1,11 +1,22 @@
 cff-version: 1.2.0
-title: "TSF: LLM-Guided Task-Semantic Field Factorization for Industrial Time-Series Forecasting"
+title: "TSF: LLM-Guided Task-Semantic Field Factorization for Industrial Process Forecasting"
 message: "If you use this code or the processed data bundles, please cite the accompanying paper."
 type: software
 authors:
-  - name: "TSF Authors"
+  - given-names: "Youcheng"
+    family-names: "Zong"
+    orcid: "https://orcid.org/0009-0008-6795-8412"
+  - given-names: "Runda"
+    family-names: "Jia"
+    orcid: "https://orcid.org/0000-0002-8586-243X"
+  - given-names: "Mingxuan"
+    family-names: "Ren"
+    orcid: "https://orcid.org/0009-0001-0172-5914"
+  - given-names: "Dakuo"
+    family-names: "He"
+    orcid: "https://orcid.org/0000-0001-8303-529X"
 repository-code: "https://github.com/mituan-ai/TSF_open"
-abstract: "Reference implementation and processed data bundles for LLM-guided task-semantic field factorization in industrial time-series forecasting."
+abstract: "Reference implementation, processed data bundles, and frozen semantic resources for LLM-guided task-semantic field factorization in industrial process forecasting."
 keywords:
   - industrial time series
   - soft sensing
@@ -13,12 +24,22 @@ keywords:
   - large language models
   - forecasting
 license: MIT
-version: "0.1.0"
-date-released: "2026-05-13"
+version: "0.2.0"
+date-released: "2026-07-15"
 preferred-citation:
   type: article
-  title: "LLM-Guided Task-Semantic Field Factorization for Industrial Time-Series Forecasting"
+  title: "LLM-Guided Task-Semantic Field Factorization for Industrial Process Forecasting"
   authors:
-    - name: "TSF Authors"
+    - given-names: "Youcheng"
+      family-names: "Zong"
+      orcid: "https://orcid.org/0009-0008-6795-8412"
+    - given-names: "Runda"
+      family-names: "Jia"
+      orcid: "https://orcid.org/0000-0002-8586-243X"
+    - given-names: "Mingxuan"
+      family-names: "Ren"
+      orcid: "https://orcid.org/0009-0001-0172-5914"
+    - given-names: "Dakuo"
+      family-names: "He"
+      orcid: "https://orcid.org/0000-0001-8303-529X"
   year: 2026
-  notes: "Manuscript citation metadata will be updated after publication."

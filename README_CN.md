@@ -1,104 +1,137 @@
+<div align="center">
+
 # TSF
 
-[English](README.md) | [中文](README_CN.md)
+### 大语言模型引导的工业过程预测任务语义场因子化
 
-**面向工业时间序列预测与软测量的开源方法实现。**
+**面向工业预测与软测量的语义输入因子化层。**
 
-TSF 提供可运行代码、处理后的 NumPy 数据包、预计算语义资源，以及工业预测和软测量流程中的 GRU / TSF-GRU 示例配置。本仓库面向希望运行、检查和改造该方法的用户，不要求重新构建私有数据处理流程。
+[![论文](https://img.shields.io/badge/论文-PDF-B31B1B?style=flat-square&logo=adobeacrobatreader&logoColor=white)](paper/TSF-Arxiv.pdf)
+[![Python](https://img.shields.io/badge/Python-3.14-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=flat-square&logo=pytorch&logoColor=white)](https://pytorch.org/)
+[![数据集](https://img.shields.io/badge/数据集-4-14B8A6?style=flat-square)](#数据集)
+[![版本](https://img.shields.io/badge/版本-0.2.0-7C3AED?style=flat-square)](https://github.com/mituan-ai/TSF_open)
+[![许可](https://img.shields.io/badge/许可-MIT-22C55E?style=flat-square)](LICENSE)
+[![NumPy](https://img.shields.io/badge/NumPy-013243?style=flat-square&logo=numpy&logoColor=white)](https://numpy.org/)
+[![uv](https://img.shields.io/badge/uv-DE5FE9?style=flat-square&logo=astral&logoColor=white)](https://docs.astral.sh/uv/)
 
-## 主要内容
+[English](README.md) · **简体中文**
 
-- 三个工业预测或软测量任务的公开处理数据包
-- 基线 GRU 与 TSF-GRU 的最小可运行配置
-- 训练、验证、测试流程和指标导出脚本
-- 已预计算的语义资源，运行公开示例不需要调用外部 API
-- 数据读取、模型构建、语义资源加载和训练 smoke test
+[项目概览](#项目概览) · [快速开始](#快速开始) · [方法](#方法) · [数据集](#数据集) · [使用方法](#使用方法) · [论文](#论文)
 
-## 快速开始
+</div>
 
-```bash
-git clone https://github.com/mituan-ai/TSF_open.git
-cd TSF_open
-uv sync --extra train --extra dev
-uv run --extra train python scripts/train_forecaster.py \
-  --config configs/experiments/indpensim_gru_tsf.yaml \
-  --max-epochs 1 \
-  --device cpu
-```
+## 项目概览
 
-运行结果会写入 `outputs/runs/`。该目录由 git 忽略，适合保存本地实验输出。
+TSF 将任务说明和变量描述引入工业时间序列模型。大语言模型在训练前整理这些描述，嵌入模型将其转换为冻结语义方向，预测模型再根据每个数值输入窗口激活相应的语义信息。
+
+- **离线构建语义：** 大语言模型和嵌入接口独立于模型训练与推理。
+- **保持输入形状：** TSF 将数值残差路径与语义投影结合，不改变原始输入形状。
+- **提供完整示例：** 仓库包含四个处理后数据集、冻结语义资源、基线配置和 TSF 配置。
 
 ## 环境要求
 
 | 组件 | 要求 |
 | --- | --- |
 | Python | `>=3.14` |
-| 包管理器 | 推荐 `uv` |
-| 基础依赖 | `numpy` |
-| 训练依赖 | 通过 `--extra train` 安装 `torch`、`scikit-learn`、`transformers`、`kernels` |
-| 测试依赖 | 通过 `--extra dev` 安装 `pytest`、`matplotlib` |
-| GPU | 可选；有 CUDA 环境时使用 `--device cuda` |
+| 环境管理 | 推荐使用 `uv` |
+| 基础依赖 | NumPy |
+| 训练依赖 | PyTorch、scikit-learn、Transformers 和 `kernels` |
+| GPU | 可选；条件允许时建议使用 CUDA 完成正式训练 |
+
+## 快速开始
+
+```bash
+git clone https://github.com/mituan-ai/TSF_open.git
+cd TSF_open
+uv sync --extra train
+uv run --extra train python scripts/train_forecaster.py \
+  --config configs/experiments/indpensim_gru_tsf.yaml \
+  --max-epochs 1 --device cpu
+```
+
+运行结果保存在 `outputs/runs/`。
+
+## 方法
+
+给定归一化输入窗口 `X ∈ ℝ^(L×d)` 和冻结语义方向 `V ∈ ℝ^(d×k)`：
+
+```text
+语义场           S = X V
+因子化输入       Z = X D + S B + b
+预测结果         ŷ = Backbone(Z)
+```
+
+- `D` 是作用于数值变量的可训练对角残差路径。
+- `B` 将语义激活投影回原来的 `d` 个输入通道。
+- `Z` 与 `X` 形状相同，可直接传入仓库支持的预测主干。
+- 仓库提供的语义资源采用 `k = 128`。
+
+```mermaid
+flowchart LR
+    subgraph Offline[离线语义构建]
+        A[task_spec.json] --> B[LLM 变量语义卡]
+        B --> C[嵌入模型]
+        C --> D[冻结语义方向 V]
+    end
+
+    subgraph Online[训练与推理]
+        X[数值窗口 X] --> E[归一化]
+        E --> F[语义场 S = XV]
+        D --> F
+        E --> G[对角路径 XD]
+        F --> H[语义投影 SB]
+        G --> I[因子化输入 Z]
+        H --> I
+        I --> J[预测主干]
+        J --> K[预测结果]
+    end
+```
+
+仓库支持 GRU、LSTM、Transformer、Informer、Mamba、iTransformer、PatchTST 和 ModernTCN；现有实验配置采用 GRU。
 
 ## 数据集
 
-每个数据集目录都包含处理后的 `windows.npz`、任务协议 `task_spec.json` 和面向读者的数据说明。
+每个数据集目录均包含处理后的 `windows.npz`、描述预测任务与变量的 `task_spec.json`，以及对应的数据和评测协议说明。
 
-| 数据集 | 任务 | 输入形状 | 目标形状 | 评估划分 |
-| --- | --- | --- | --- | --- |
-| `indpensim` | 青霉素离线浓度软测量 | `(818, 120, 23)` | `(818,)` | `train/same_family/near/far` batches |
-| `thickener_dewatering` | 底流浓度软测量 | `(5149, 30, 5)` | `(5149,)` | `train/near/far` scenarios |
-| `ladle_preheating` | 5 步温度预测 | `(19840, 60, 14)` | `(19840, 5)` | process-level holdout |
+| 数据集 | 任务 | 输入 → 目标 | 样本数 | 来源 |
+| --- | --- | --- | ---: | --- |
+| [`ladle_preheating`](resources/datasets/ladle_preheating/README.md) | 钢包预热多步温度预测 | `(60, 14) → (5,)` | 19,840 | 处理后现场数据 |
+| [`thickener_dewatering`](resources/datasets/thickener_dewatering/README.md) | 浓密脱水底流浓度软测量 | `(30, 5) → (1,)` | 5,149 | 仿真数据 |
+| [`indpensim`](resources/datasets/indpensim/README.md) | 离线青霉素浓度软测量 | `(120, 23) → (1,)` | 818 | [Mendeley Data](https://doi.org/10.17632/pdnjz7zz5x) |
+| [`tennessee_eastman`](resources/datasets/tennessee_eastman/README.md) | 延迟产品组分 G 软测量 | `(20, 33) → (1,)` | 47,775 | [Harvard Dataverse](https://doi.org/10.7910/DVN/6C3JR1) |
 
-`windows.npz` 中的主要数组：
+每个 `windows.npz` 包含：
 
-| 数组 | 说明 |
+| 数组 | 内容 |
 | --- | --- |
-| `windows` | float32 输入窗口，形状为 `(samples, time, features)` |
-| `targets` | float32 预测目标 |
-| `sample_metadata_json` | 每个样本对应的一行 JSON 元数据 |
-| `metadata_json` | 特征名、目标名和公开数据包元数据 |
+| `windows` | 形状为 `(samples, time, features)` 的 float32 输入窗口 |
+| `targets` | float32 回归目标 |
+| `sample_metadata_json` | 样本级数据划分和场景信息 |
+| `metadata_json` | 变量顺序、目标定义、数据来源和协议信息 |
 
-更详细的数据边界和划分说明见：
+## 使用方法
 
-- `resources/datasets/indpensim/README.md`
-- `resources/datasets/thickener_dewatering/README.md`
-- `resources/datasets/ladle_preheating/README.md`
-
-## 训练示例
-
-运行基线 GRU：
+选择仓库中的实验配置运行训练：
 
 ```bash
 uv run --extra train python scripts/train_forecaster.py \
-  --config configs/experiments/indpensim_gru.yaml \
+  --config configs/experiments/<config>.yaml \
   --device cuda
 ```
 
-运行 TSF-GRU：
+| 数据集 | 基线 | TSF |
+| --- | --- | --- |
+| IndPenSim | `indpensim_gru.yaml` | `indpensim_gru_tsf.yaml` |
+| 钢包预热 | `ladle_preheating_gru.yaml` | `ladle_preheating_gru_tsf.yaml` |
+| 浓密脱水 | `thickener_dewatering_gru.yaml` | `thickener_dewatering_gru_tsf.yaml` |
+| Tennessee Eastman | `tennessee_eastman_gru.yaml` | `tennessee_eastman_gru_tsf.yaml` |
 
-```bash
-uv run --extra train python scripts/train_forecaster.py \
-  --config configs/experiments/indpensim_gru_tsf.yaml \
-  --device cuda
-```
-
-可用配置：
-
-```text
-configs/experiments/
-├── indpensim_gru.yaml
-├── indpensim_gru_tsf.yaml
-├── ladle_preheating_gru.yaml
-├── ladle_preheating_gru_tsf.yaml
-├── thickener_dewatering_gru.yaml
-└── thickener_dewatering_gru_tsf.yaml
-```
-
-训练输出包括配置快照、归一化统计、数据划分摘要、指标、预测结果、日志和 checkpoint。
+每次运行都会保存最终配置、归一化统计、数据划分、模型检查点、预测结果、评测指标、耗时、内存占用和日志。
 
 ## 语义资源
 
-公开示例配置默认使用仓库内已经生成好的语义资源：
+现有实验配置从以下目录读取冻结语义资源：
 
 ```text
 resources/semantic_artifacts/<dataset>/
@@ -106,55 +139,51 @@ resources/semantic_artifacts/<dataset>/
 └── semantic_field_metadata.json
 ```
 
-因此，直接运行公开示例不需要 API key。只有在你要为新任务重新生成语义卡片或重建语义资源时，才需要配置本地 API：
+为新任务构建语义资源时，先在 `configs/env/api.local.env` 中配置大语言模型和嵌入服务，再依次运行两个阶段：
 
 ```bash
 cp configs/env/api.env configs/env/api.local.env
+
+uv run --extra llm python scripts/build_semantic_cards.py \
+  --task-spec path/to/task_spec.json \
+  --call-api \
+  --output-dir outputs/semantics/my_task
+
+uv run --extra llm python scripts/build_semantic_artifact.py \
+  --semantic-cards outputs/semantics/my_task/semantic_cards.json \
+  --output-dir outputs/semantic_artifacts/my_task
 ```
 
-然后在 `configs/env/api.local.env` 中填写本地凭据。该文件已被 git 忽略。
+生成参数在 `configs/llm.yaml` 和 `configs/embedding.yaml` 中定义。
 
-生成新任务的语义卡片提示包：
+## 论文
 
-```bash
-uv run python scripts/build_semantic_cards.py \
-  --task-spec resources/datasets/indpensim/task_spec.json
-```
+**LLM-Guided Task-Semantic Field Factorization for Industrial Process Forecasting**<br>
+Youcheng Zong、Runda Jia、Mingxuan Ren、Dakuo He
 
-## 项目结构
+[阅读论文](paper/TSF-Arxiv.pdf)
 
-```text
-src/tsf/
-├── data/                 # NPZ 数据读取、划分与归一化
-├── methods/              # TSF 输入适配层
-├── models/               # 时间序列 backbone 与预测模型封装
-├── training/             # 配置解析、训练循环与指标
-├── llm_semantics.py      # 语义卡片校验与资源构建
-├── semantic_field.py     # 语义资源加载与 NumPy 工具
-└── task_schema.py        # task_spec.json 协议与提示包构建
-```
-
-## 开发与测试
-
-```bash
-uv sync --extra dev --extra train
-uv run pytest tests/test_window_npz_data.py tests/test_semantic_field.py tests/test_embedding_config.py -q
-uv run --extra train pytest tests/test_forecaster_models.py tests/test_training_runner_smoke.py -q
-```
+论文在钢包预热、浓密脱水和 IndPenSim 上评估 TSF。本仓库还提供 Tennessee Eastman Process 的数据协议和示例配置。
 
 ## 引用
 
-如果本仓库对你的研究有帮助，请引用配套论文。最终出版信息会在 `CITATION.cff` 中更新。
-
 ```bibtex
-@article{tsf2026,
-  title = {LLM-Guided Task-Semantic Field Factorization for Industrial Time-Series Forecasting},
-  author = {TSF Authors},
-  year = {2026},
-  note = {Manuscript citation metadata to be updated after publication}
+@misc{zong2026tsf,
+  title  = {LLM-Guided Task-Semantic Field Factorization for Industrial Process Forecasting},
+  author = {Youcheng Zong and Runda Jia and Mingxuan Ren and Dakuo He},
+  year   = {2026},
+  note   = {Preprint},
+  url    = {https://github.com/mituan-ai/TSF_open}
 }
+```
+
+## 开发验证
+
+```bash
+uv sync --extra dev --extra train
+uv run --extra train pytest -q
 ```
 
 ## 许可
 
-本仓库使用 MIT License。详见 `LICENSE`。
+代码采用 [MIT License](LICENSE)。源自公开数据集的内容仍遵循原始许可和引用要求。

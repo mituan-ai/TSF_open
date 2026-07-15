@@ -1,104 +1,137 @@
+<div align="center">
+
 # TSF
 
-[English](README.md) | [中文](README_CN.md)
+### LLM-Guided Task-Semantic Field Factorization for Industrial Process Forecasting
 
-**An open-source method implementation for industrial time-series forecasting and soft sensing.**
+**A semantic input factorization layer for industrial forecasting and soft sensing.**
 
-TSF provides runnable code, processed NumPy data bundles, precomputed semantic resources, and example GRU / TSF-GRU configurations for industrial forecasting and soft-sensing workflows. The repository is designed for users who want to run, inspect, and adapt the method without rebuilding private data pipelines.
+[![Paper](https://img.shields.io/badge/Paper-PDF-B31B1B?style=flat-square&logo=adobeacrobatreader&logoColor=white)](paper/TSF-Arxiv.pdf)
+[![Python](https://img.shields.io/badge/Python-3.14-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=flat-square&logo=pytorch&logoColor=white)](https://pytorch.org/)
+[![Datasets](https://img.shields.io/badge/Datasets-4-14B8A6?style=flat-square)](#datasets)
+[![Version](https://img.shields.io/badge/Version-0.2.0-7C3AED?style=flat-square)](https://github.com/mituan-ai/TSF_open)
+[![License](https://img.shields.io/badge/License-MIT-22C55E?style=flat-square)](LICENSE)
+[![NumPy](https://img.shields.io/badge/NumPy-013243?style=flat-square&logo=numpy&logoColor=white)](https://numpy.org/)
+[![uv](https://img.shields.io/badge/uv-DE5FE9?style=flat-square&logo=astral&logoColor=white)](https://docs.astral.sh/uv/)
 
-## What's Included
+**English** · [简体中文](README_CN.md)
 
-- Public processed data bundles for three industrial forecasting or soft-sensing tasks
-- Minimal runnable configs for baseline GRU and TSF-GRU experiments
-- Training, validation, testing, and metric export utilities
-- Precomputed semantic resources, so the released examples do not require external API calls
-- Tests for data loading, model construction, semantic-resource loading, and training smoke runs
+[Overview](#overview) · [Quick Start](#quick-start) · [Method](#method) · [Datasets](#datasets) · [Usage](#usage) · [Paper](#paper)
 
-## Quick Start
+</div>
 
-```bash
-git clone https://github.com/mituan-ai/TSF_open.git
-cd TSF_open
-uv sync --extra train --extra dev
-uv run --extra train python scripts/train_forecaster.py \
-  --config configs/experiments/indpensim_gru_tsf.yaml \
-  --max-epochs 1 \
-  --device cpu
-```
+## Overview
 
-The run writes outputs to `outputs/runs/`. This directory is ignored by git and is intended for local experiment artifacts.
+TSF incorporates task and variable descriptions into industrial time-series models. An LLM organizes the descriptions before training, an embedding model converts them into frozen semantic directions, and the forecasting model activates those directions from each numerical input window.
+
+- **Offline semantic construction:** LLM and embedding calls are separated from model training and inference.
+- **Shape-preserving factorization:** the TSF layer combines a numerical residual path with a semantic projection while retaining the original input shape.
+- **Reusable experiments:** the repository includes four processed datasets, frozen semantic artifacts, baseline configurations, and TSF configurations.
 
 ## Requirements
 
 | Component | Requirement |
 | --- | --- |
 | Python | `>=3.14` |
-| Package manager | `uv` recommended |
-| Core dependency | `numpy` |
-| Training dependencies | `torch`, `scikit-learn`, `transformers`, and `kernels` via `--extra train` |
-| Test dependencies | `pytest` and `matplotlib` via `--extra dev` |
-| GPU | Optional; use `--device cuda` when CUDA is available |
+| Environment manager | `uv` recommended |
+| Core dependency | NumPy |
+| Training dependencies | PyTorch, scikit-learn, Transformers, and `kernels` |
+| GPU | Optional; use CUDA for full training when available |
+
+## Quick Start
+
+```bash
+git clone https://github.com/mituan-ai/TSF_open.git
+cd TSF_open
+uv sync --extra train
+uv run --extra train python scripts/train_forecaster.py \
+  --config configs/experiments/indpensim_gru_tsf.yaml \
+  --max-epochs 1 --device cpu
+```
+
+Results are saved under `outputs/runs/`.
+
+## Method
+
+For a normalized input window `X ∈ ℝ^(L×d)` and frozen semantic directions `V ∈ ℝ^(d×k)`:
+
+```text
+Semantic field       S = X V
+Factorized input     Z = X D + S B + b
+Forecast             ŷ = Backbone(Z)
+```
+
+- `D` is a trainable diagonal residual path for the numerical variables.
+- `B` projects semantic activations back to the original `d` input channels.
+- `Z` has the same shape as `X` and can be passed to the supported forecasting backbones.
+- The included semantic artifacts use `k = 128`.
+
+```mermaid
+flowchart LR
+    subgraph Offline[Offline semantic construction]
+        A[task_spec.json] --> B[LLM semantic cards]
+        B --> C[Embedding model]
+        C --> D[Frozen directions V]
+    end
+
+    subgraph Online[Training and inference]
+        X[Numerical window X] --> E[Normalize]
+        E --> F[Semantic field S = XV]
+        D --> F
+        E --> G[Diagonal path XD]
+        F --> H[Semantic projection SB]
+        G --> I[Factorized input Z]
+        H --> I
+        I --> J[Forecasting backbone]
+        J --> K[Prediction]
+    end
+```
+
+Supported backbones are GRU, LSTM, Transformer, Informer, Mamba, iTransformer, PatchTST, and ModernTCN. The included experiment configurations use GRU.
 
 ## Datasets
 
-Each dataset directory contains a processed `windows.npz` bundle, a `task_spec.json` task protocol, and reader-facing dataset notes.
+Each dataset directory contains a processed `windows.npz` bundle, a `task_spec.json` describing the forecasting task and variables, and dataset-specific protocol notes.
 
-| Dataset | Task | Input shape | Target shape | Evaluation split |
-| --- | --- | --- | --- | --- |
-| `indpensim` | Offline penicillin soft sensing | `(818, 120, 23)` | `(818,)` | `train/same_family/near/far` batches |
-| `thickener_dewatering` | Underflow concentration soft sensing | `(5149, 30, 5)` | `(5149,)` | `train/near/far` scenarios |
-| `ladle_preheating` | 5-step temperature forecasting | `(19840, 60, 14)` | `(19840, 5)` | process-level holdout |
+| Dataset | Task | Input → target | Samples | Origin |
+| --- | --- | --- | ---: | --- |
+| [`ladle_preheating`](resources/datasets/ladle_preheating/README.md) | Multi-step ladle temperature forecasting | `(60, 14) → (5,)` | 19,840 | Processed field data |
+| [`thickener_dewatering`](resources/datasets/thickener_dewatering/README.md) | Underflow concentration soft sensing | `(30, 5) → (1,)` | 5,149 | Simulation data |
+| [`indpensim`](resources/datasets/indpensim/README.md) | Offline penicillin concentration soft sensing | `(120, 23) → (1,)` | 818 | [Mendeley Data](https://doi.org/10.17632/pdnjz7zz5x) |
+| [`tennessee_eastman`](resources/datasets/tennessee_eastman/README.md) | Delayed product-G composition soft sensing | `(20, 33) → (1,)` | 47,775 | [Harvard Dataverse](https://doi.org/10.7910/DVN/6C3JR1) |
 
-`windows.npz` stores:
+Each `windows.npz` contains:
 
-| Array | Description |
+| Array | Content |
 | --- | --- |
-| `windows` | float32 input windows with shape `(samples, time, features)` |
-| `targets` | float32 prediction targets |
-| `sample_metadata_json` | one JSON metadata row per sample |
-| `metadata_json` | feature names, target names, and public bundle metadata |
+| `windows` | Float32 inputs with shape `(samples, time, features)` |
+| `targets` | Float32 regression targets |
+| `sample_metadata_json` | Sample-level split and scenario metadata |
+| `metadata_json` | Feature order, target definition, source, and protocol metadata |
 
-Detailed data boundaries and split notes are available in:
+## Usage
 
-- `resources/datasets/indpensim/README.md`
-- `resources/datasets/thickener_dewatering/README.md`
-- `resources/datasets/ladle_preheating/README.md`
-
-## Training Examples
-
-Run a GRU baseline:
+Run an experiment by selecting one of the included configurations:
 
 ```bash
 uv run --extra train python scripts/train_forecaster.py \
-  --config configs/experiments/indpensim_gru.yaml \
+  --config configs/experiments/<config>.yaml \
   --device cuda
 ```
 
-Run TSF-GRU:
+| Dataset | Baseline | TSF |
+| --- | --- | --- |
+| IndPenSim | `indpensim_gru.yaml` | `indpensim_gru_tsf.yaml` |
+| Ladle preheating | `ladle_preheating_gru.yaml` | `ladle_preheating_gru_tsf.yaml` |
+| Thickener dewatering | `thickener_dewatering_gru.yaml` | `thickener_dewatering_gru_tsf.yaml` |
+| Tennessee Eastman | `tennessee_eastman_gru.yaml` | `tennessee_eastman_gru_tsf.yaml` |
 
-```bash
-uv run --extra train python scripts/train_forecaster.py \
-  --config configs/experiments/indpensim_gru_tsf.yaml \
-  --device cuda
-```
-
-Available configs:
-
-```text
-configs/experiments/
-├── indpensim_gru.yaml
-├── indpensim_gru_tsf.yaml
-├── ladle_preheating_gru.yaml
-├── ladle_preheating_gru_tsf.yaml
-├── thickener_dewatering_gru.yaml
-└── thickener_dewatering_gru_tsf.yaml
-```
-
-Training outputs include config snapshots, normalization statistics, split summaries, metrics, predictions, logs, and checkpoints.
+Each run records the resolved configuration, normalization statistics, data splits, checkpoint, predictions, metrics, timing, memory use, and logs.
 
 ## Semantic Resources
 
-The released example configs use precomputed semantic resources stored in the repository:
+The included experiment configurations load frozen semantic resources from:
 
 ```text
 resources/semantic_artifacts/<dataset>/
@@ -106,55 +139,51 @@ resources/semantic_artifacts/<dataset>/
 └── semantic_field_metadata.json
 ```
 
-This means the public examples can be reproduced without an API key. You only need local API credentials if you want to generate semantic cards for a new task or rebuild semantic resources:
+To construct semantic resources for a new task, configure the LLM and embedding provider in `configs/env/api.local.env`, then run both stages:
 
 ```bash
 cp configs/env/api.env configs/env/api.local.env
+
+uv run --extra llm python scripts/build_semantic_cards.py \
+  --task-spec path/to/task_spec.json \
+  --call-api \
+  --output-dir outputs/semantics/my_task
+
+uv run --extra llm python scripts/build_semantic_artifact.py \
+  --semantic-cards outputs/semantics/my_task/semantic_cards.json \
+  --output-dir outputs/semantic_artifacts/my_task
 ```
 
-Fill credentials in `configs/env/api.local.env`. The local file is ignored by git.
+Generation settings are defined in `configs/llm.yaml` and `configs/embedding.yaml`.
 
-Generate a semantic-card prompt package for a task:
+## Paper
 
-```bash
-uv run python scripts/build_semantic_cards.py \
-  --task-spec resources/datasets/indpensim/task_spec.json
-```
+**LLM-Guided Task-Semantic Field Factorization for Industrial Process Forecasting**<br>
+Youcheng Zong, Runda Jia, Mingxuan Ren, and Dakuo He
 
-## Project Structure
+[Read the paper](paper/TSF-Arxiv.pdf)
 
-```text
-src/tsf/
-├── data/                 # NPZ data loading, splits, and normalization
-├── methods/              # TSF input adapter
-├── models/               # Time-series backbones and forecast-model wrapper
-├── training/             # Config parsing, training loop, and metrics
-├── llm_semantics.py      # Semantic-card validation and resource building
-├── semantic_field.py     # Semantic-resource loading and NumPy utilities
-└── task_schema.py        # task_spec.json protocol and prompt-package construction
+The paper evaluates TSF on ladle preheating, thickener dewatering, and IndPenSim. This repository also includes a Tennessee Eastman Process dataset protocol and example configuration.
+
+## Citation
+
+```bibtex
+@misc{zong2026tsf,
+  title  = {LLM-Guided Task-Semantic Field Factorization for Industrial Process Forecasting},
+  author = {Youcheng Zong and Runda Jia and Mingxuan Ren and Dakuo He},
+  year   = {2026},
+  note   = {Preprint},
+  url    = {https://github.com/mituan-ai/TSF_open}
+}
 ```
 
 ## Development
 
 ```bash
 uv sync --extra dev --extra train
-uv run pytest tests/test_window_npz_data.py tests/test_semantic_field.py tests/test_embedding_config.py -q
-uv run --extra train pytest tests/test_forecaster_models.py tests/test_training_runner_smoke.py -q
-```
-
-## Citation
-
-If this repository is useful in your work, please cite the accompanying paper. The final publication metadata will be updated in `CITATION.cff`.
-
-```bibtex
-@article{tsf2026,
-  title = {LLM-Guided Task-Semantic Field Factorization for Industrial Time-Series Forecasting},
-  author = {TSF Authors},
-  year = {2026},
-  note = {Manuscript citation metadata to be updated after publication}
-}
+uv run --extra train pytest -q
 ```
 
 ## License
 
-This repository is released under the MIT License. See `LICENSE`.
+Code is released under the [MIT License](LICENSE). Datasets derived from public sources remain subject to their original terms and citation requirements.

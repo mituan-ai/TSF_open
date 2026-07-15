@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tsf-open"
-version = "0.1.0"
-description = "Open-source method implementation for industrial time-series forecasting and soft sensing"
+version = "0.2.0"
+description = "LLM-guided task-semantic field factorization for industrial process forecasting"
 requires-python = ">=3.14"
 dependencies = [
   "numpy",
